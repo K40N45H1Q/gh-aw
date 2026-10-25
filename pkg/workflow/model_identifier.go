@@ -270,7 +270,7 @@ func validateModelToken(token string) error {
 // The outer MAF identifier uses "openrouter/" as its provider prefix; the remainder
 // is passed unchanged to OpenRouter's OpenAI-compatible API.
 func validateOpenRouterModelToken(token string) error {
-	if token == "" || !regexp.MustCompile(\`^[A-Za-z0-9][A-Za-z0-9_./:-]*$\`).MatchString(token) {
+	if token == "" || !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_./:-]*$`).MatchString(token) {
 		return fmt.Errorf("model identifier: invalid OpenRouter model token %q (segment type: model)", token)
 	}
 	return nil
