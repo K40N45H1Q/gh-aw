@@ -23,8 +23,8 @@ func TestFirstForbiddenCharInModelToken(t *testing.T) {
 		{name: "hyphen allowed", s: "a-b", want: 0},
 		{name: "mixed allowed characters", s: "gpt-4.1_turbo", want: 0},
 		{name: "space is forbidden", s: "a b", want: ' '},
-		{name: "slash is forbidden", s: "a/b", want: '/'},
-		{name: "colon is forbidden", s: "a:b", want: ':'},
+		{name: "slash is allowed for namespaced provider models", s: "a/b", want: 0},
+		{name: "colon is allowed for model variants", s: "a:b", want: 0},
 		{name: "at sign is forbidden as first char", s: "@abc", want: '@'},
 		{name: "forbidden char after allowed prefix", s: "model-v1@latest", want: '@'},
 		{name: "unicode letter is forbidden", s: "modèle", want: 'è'},
@@ -40,6 +40,15 @@ func TestFirstForbiddenCharInModelToken(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestParseModelIdentifierOpenRouterNamespacedFreeModel(t *testing.T) {
+	p, err := ParseModelIdentifier("openrouter/recursive/flint-v1.0:free")
+	if err != nil {
+		t.Fatalf("expected OpenRouter model ID to parse, got error: %v", err)
+	}
+	assert.Equal(t, "openrouter", p.Provider)
+	assert.Equal(t, "recursive/flint-v1.0:free", p.ModelToken)
 }
 
 func FuzzFirstForbiddenCharInModelToken(f *testing.F) {
@@ -59,9 +68,9 @@ func FuzzFirstForbiddenCharInModelToken(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string) {
 		got := firstForbiddenCharInModelToken(s)
 		if got == 0 {
-			// No forbidden char found: every rune must be alnum, '_', '.', or '-'.
+			// No forbidden char found: every rune must be alnum, '_', '.', '-', '/', or ':'.
 			for _, r := range s {
-				if !isAlpha(r) && !isDigit(r) && r != '_' && r != '.' && r != '-' {
+				if !isAlpha(r) && !isDigit(r) && r != '_' && r != '.' && r != '-' && r != '/' && r != ':' {
 					t.Fatalf("firstForbiddenCharInModelToken(%q) = 0, but rune %q is forbidden", s, r)
 				}
 			}
