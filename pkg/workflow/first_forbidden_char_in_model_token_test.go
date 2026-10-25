@@ -23,8 +23,8 @@ func TestFirstForbiddenCharInModelToken(t *testing.T) {
 		{name: "hyphen allowed", s: "a-b", want: 0},
 		{name: "mixed allowed characters", s: "gpt-4.1_turbo", want: 0},
 		{name: "space is forbidden", s: "a b", want: ' '},
-		{name: "slash is allowed for namespaced provider models", s: "a/b", want: 0},
-		{name: "colon is allowed for model variants", s: "a:b", want: 0},
+		{name: "slash is forbidden in generic model tokens", s: "a/b", want: '/'},
+		{name: "colon is forbidden in generic model tokens", s: "a:b", want: ':'},
 		{name: "at sign is forbidden as first char", s: "@abc", want: '@'},
 		{name: "forbidden char after allowed prefix", s: "model-v1@latest", want: '@'},
 		{name: "unicode letter is forbidden", s: "modèle", want: 'è'},
@@ -68,9 +68,9 @@ func FuzzFirstForbiddenCharInModelToken(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string) {
 		got := firstForbiddenCharInModelToken(s)
 		if got == 0 {
-			// No forbidden char found: every rune must be alnum, '_', '.', '-', '/', or ':'.
+			// No forbidden char found: every rune must be alnum, '_', '.', or '-'.
 			for _, r := range s {
-				if !isAlpha(r) && !isDigit(r) && r != '_' && r != '.' && r != '-' && r != '/' && r != ':' {
+				if !isAlpha(r) && !isDigit(r) && r != '_' && r != '.' && r != '-' {
 					t.Fatalf("firstForbiddenCharInModelToken(%q) = 0, but rune %q is forbidden", s, r)
 				}
 			}
