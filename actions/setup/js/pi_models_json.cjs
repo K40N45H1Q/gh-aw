@@ -442,7 +442,26 @@ async function main(options = {}) {
       reflectData,
       refetchReflectData,
       preserveAuto: true,
-      normalize: result => result.modelId,
+      normalize: result => {
+        const normalizedModelId = String(result.modelId || "").split("?")[0].toLowerCase();
+        const endpoint = reflectData?.endpoints?.find(item =>
+          item?.configured === true
+          && normalizeReflectProviderName(item.provider) === normalizeReflectProviderName(provider)
+        );
+        const advertisedModels = Array.isArray(endpoint?.models)
+          ? endpoint.models.map(model => typeof model === "string" ? model : String(model?.id || model?.name || ""))
+          : [];
+        const exactModel = advertisedModels.find(id => id.toLowerCase() === normalizedModelId);
+        if (exactModel) return exactModel;
+        const providerScopedModel = advertisedModels.find(id => {
+          const normalizedId = id.toLowerCase();
+          const slash = normalizedId.indexOf("/");
+          return slash > 0
+            && canonicalModelProvider(normalizedId.slice(0, slash)) === normalizeReflectProviderName(provider)
+            && normalizedId.slice(slash + 1) === normalizedModelId;
+        });
+        return providerScopedModel || result.modelId;
+      },
       logger,
     });
     if (resolution.reflectData) reflectData = resolution.reflectData;
