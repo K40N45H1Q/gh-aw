@@ -443,7 +443,10 @@ async function main(options = {}) {
       refetchReflectData,
       preserveAuto: true,
       normalize: result => {
-        const normalizedModelId = String(result.modelId || "").split("?")[0].toLowerCase();
+        const rawModelId = String(result.modelId || "");
+        const queryIndex = rawModelId.indexOf("?");
+        const modelParameters = queryIndex >= 0 ? rawModelId.slice(queryIndex) : "";
+        const normalizedModelId = (queryIndex >= 0 ? rawModelId.slice(0, queryIndex) : rawModelId).toLowerCase();
         const endpoint = reflectData?.endpoints?.find(item =>
           item?.configured === true
           && normalizeReflectProviderName(item.provider) === normalizeReflectProviderName(provider)
@@ -452,7 +455,7 @@ async function main(options = {}) {
           ? endpoint.models.map(model => typeof model === "string" ? model : String(model?.id || model?.name || ""))
           : [];
         const exactModel = advertisedModels.find(id => id.toLowerCase() === normalizedModelId);
-        if (exactModel) return exactModel;
+        if (exactModel) return exactModel + modelParameters;
         const providerScopedModel = advertisedModels.find(id => {
           const normalizedId = id.toLowerCase();
           const slash = normalizedId.indexOf("/");
@@ -460,7 +463,7 @@ async function main(options = {}) {
             && canonicalModelProvider(normalizedId.slice(0, slash)) === normalizeReflectProviderName(provider)
             && normalizedId.slice(slash + 1) === normalizedModelId;
         });
-        return providerScopedModel || result.modelId;
+        return providerScopedModel ? providerScopedModel + modelParameters : result.modelId;
       },
       logger,
     });
