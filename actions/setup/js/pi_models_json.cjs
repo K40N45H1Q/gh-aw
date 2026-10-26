@@ -226,8 +226,11 @@ function validatePiModelAvailability(options) {
     if (model && typeof model === "object") return String(model.id || model.name || "").toLowerCase();
     return "";
   });
+  const providerPrefixedModelId = normalizedModelId.startsWith(`${normalizedProvider}/`)
+    ? normalizedModelId.slice(normalizedProvider.length + 1)
+    : "";
   const modelIsAdvertised = advertisedModels.some(advertisedModel => {
-    if (advertisedModel === normalizedModelId) return true;
+    if (advertisedModel === normalizedModelId || advertisedModel === providerPrefixedModelId) return true;
     const slash = advertisedModel.indexOf("/");
     return slash > 0
       && canonicalModelProvider(advertisedModel.slice(0, slash)) === normalizedProvider
@@ -456,14 +459,22 @@ async function main(options = {}) {
           : [];
         const exactModel = advertisedModels.find(id => id.toLowerCase() === normalizedModelId);
         if (exactModel) return exactModel + modelParameters;
+        const normalizedProvider = normalizeReflectProviderName(provider);
         const providerScopedModel = advertisedModels.find(id => {
           const normalizedId = id.toLowerCase();
           const slash = normalizedId.indexOf("/");
           return slash > 0
-            && canonicalModelProvider(normalizedId.slice(0, slash)) === normalizeReflectProviderName(provider)
+            && canonicalModelProvider(normalizedId.slice(0, slash)) === normalizedProvider
             && normalizedId.slice(slash + 1) === normalizedModelId;
         });
-        return providerScopedModel ? providerScopedModel + modelParameters : result.modelId;
+        if (!providerScopedModel) return result.modelId;
+        const baseUrl = String(process.env.OPENAI_BASE_URL || "").toLowerCase();
+        const customOpenAIEndpoint = Boolean(baseUrl) && !/^https?:\/\/api\.openai\.com(?:\/|$)/.test(baseUrl);
+        const modelPrefix = providerScopedModel.split("/", 1)[0];
+        if (customOpenAIEndpoint && canonicalModelProvider(modelPrefix) === normalizedProvider) {
+          return `${modelPrefix}/${providerScopedModel}${modelParameters}`;
+        }
+        return providerScopedModel + modelParameters;
       },
       logger,
     });
