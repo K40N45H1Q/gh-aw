@@ -226,7 +226,14 @@ function validatePiModelAvailability(options) {
     if (model && typeof model === "object") return String(model.id || model.name || "").toLowerCase();
     return "";
   });
-  if (advertisedModels.includes(normalizedModelId)) {
+  const modelIsAdvertised = advertisedModels.some(advertisedModel => {
+    if (advertisedModel === normalizedModelId) return true;
+    const slash = advertisedModel.indexOf("/");
+    return slash > 0
+      && canonicalModelProvider(advertisedModel.slice(0, slash)) === normalizedProvider
+      && advertisedModel.slice(slash + 1) === normalizedModelId;
+  });
+  if (modelIsAdvertised) {
     logger(`awf-reflect: model availability confirmed (provider=${endpoint.provider}, model=${modelId})`);
     return;
   }
